@@ -14,7 +14,6 @@
  * a little simpler to work with.
  */
 
-
 var Engine = (function(global) {
     /* Predefine the variables we'll be using within this scope,
      * create the canvas element, grab the 2D context for that canvas
@@ -40,30 +39,33 @@ var Engine = (function(global) {
          * would be the same for everyone (regardless of how fast their
          * computer is) - hurray time!
          */
-        var now = Date.now(),
+        // game state 
+        if(!endGame && !youLose){
+             /* Call our update/render functions, pass along the time delta to
+             * our update function since it may be used for smooth animation.
+             */
+            var now = Date.now(),
             dt = (now - lastTime) / 1000.0;
-
-        /* Call our update/render functions, pass along the time delta to
-         * our update function since it may be used for smooth animation.
-         */
-        if(!endGame){
             updateEntities(dt);
+            drawGameScreen(canvas, ctx);
+            render();
+
+            /* Set our lastTime variable which is used to determine the time delta
+            * for the next time this function is called.
+            */
+            lastTime = now;
+
+            /* Use the browser's requestAnimationFrame function to call this
+             * function again as soon as the browser is able to draw another frame.
+             */
+            win.requestAnimationFrame(main);
         }
-
-        render();
-
-        /* Set our lastTime variable which is used to determine the time delta
-         * for the next time this function is called.
-         */
-        lastTime = now;
-
-        /* Use the browser's requestAnimationFrame function to call this
-         * function again as soon as the browser is able to draw another frame.
-         */
-        win.requestAnimationFrame(main);
-
+        // game ended 
         if(endGame) {
-            restartGame();
+            restartGame(0);
+        }
+        if(youLose) {
+            restartGame(1);
         }
     }
 
@@ -73,9 +75,8 @@ var Engine = (function(global) {
      */
     function init() {
         lastTime = Date.now();
-        setEnemies(); // populate the enemies array
-        //reset();
-        main();
+        // call the pre-game settings
+        startScreen();
     }
 
     /* This is called by the update function and loops through all of the
@@ -149,90 +150,112 @@ var Engine = (function(global) {
         player.render();
     }
 
-    /* This function does nothing but it could have been a good place to
-     * handle game reset states - maybe a new game menu or a game over screen
-     * those sorts of things. It's only called once by the init() method.
-     */
-    function reset() {
-        colorRect(0, 0, canvas.width, canvas.height, 'black');
-        colorText("BUG GAME", canvas.width/2, 100, 'yellow', "bold 30px Verdana");
-        colorText("PRESS ENTER TO PLAY", canvas.width/2, canvas.height-50, 'white', "18px Verdana");
-        var image = new Image();
-        var imageNum = 0;
-        image.src = 'images/char-boy.png';
-        ctx.drawImage(image, canvas.width/2, canvas.height/2);
+    // draw the initial screen of the game, with the possibility to change player's sprite and game difficulty 
+    function startScreen() {
+        drawStartScreen(canvas, ctx, playerImagePath);
+        // wait for keyboard inputs to change settings or start the game
         document.addEventListener('keyup', function(e) {
-            colorRect(0, 0, canvas.width, canvas.height, 'black');
-            colorText("BUG GAME", canvas.width/2, 100, 'yellow', "bold 30px Verdana");
-            colorText("PRESS ENTER TO PLAY", canvas.width/2, canvas.height-50, 'white', "18px Verdana");
-            ctx.drawImage(image, canvas.width/2, canvas.height/2);
-            if(e.keyCode == 13) {
-                startGame = true;
+            if(!startGame) {
+                if(e.keyCode == 13) { // enter is pressed
+                    setEnemies(); // populate the enemies array
+                    startGame = true; // set the condition to start the game
+                }
+                if(e.keyCode == 37 || e.keyCode == 39) { // left or right arrows pressed
+                    chooseCharacter(e.keyCode); // call the function to change player's sprite
+                    drawStartScreen(canvas, ctx, playerImagePath); // update the initial screen with the changes
+                }
+                else if(e.keyCode == 38 || e.keyCode == 40) { // up or down arrows pressed
+                    chooseDifficulty(e.keyCode); // call the function to change game difficulty
+                    drawStartScreen(canvas, ctx, playerImagePath); // update the initial screen with the changes
+                }
+            }
+            // when game is ready to start, call the main function
+            if(startGame) {
                 main();
-                return;
-            }
-            else if(e.keyCode == 39) {
-                if(imageNum == 4) {
-                    imageNum = 0;
-                }
-                else {
-                    imageNum++;
-                }
-                changeImage(image, imageNum);
-            }
-            else if(e.keyCode == 37) {
-                if(imageNum == -1) {
-                    imageNum = 4;
-                }
-                else {
-                    imageNum--;
-                }
-                changeImage(image, imageNum);
             }
         });
+        
     }
 
-    function changeImage(imageToChange, imageNum) {
-        switch(imageNum) {
+    // function to change player's sprite based on the keyboard input passed
+    function chooseCharacter(code) {
+        // update the index to player's sprites 
+        if(code == 37) {
+            imgCharIndex--;
+            if(imgCharIndex < 0) {
+                imgCharIndex = imgCharLength-1;
+            }
+        }
+        else if(code == 39) {
+            imgCharIndex++;
+            if(imgCharIndex > imgCharLength-1) {
+                imgCharIndex = 0;
+            }
+        }
+        // choose the new image based on the current index 
+        switch(imgCharIndex) {
             case 0:
-                imageToChange.src = 'images/char-boy.png';
+                playerImagePath = 'images/char-boy.png';
                 break;
             case 1:
-                imageToChange.src = 'images/char-cat-girl.png';
+                playerImagePath = 'images/char-cat-girl.png';
                 break;
             case 2:
-                imageToChange.src = 'images/char-horn-girl.png';
+                playerImagePath = 'images/char-horn-girl.png';
                 break;
             case 3:
-                imageToChange.src = 'images/char-pink-girl.png';
+                playerImagePath = 'images/char-pink-girl.png';
                 break;
             case 4:
-                imageToChange.src = 'images/char-princess-girl.png';
+                playerImagePath = 'images/char-princess-girl.png';
                 break;
         }
-        ctx.drawImage(imageToChange, canvas.width/2, canvas.height/2);
+        player.updateSprite(playerImagePath);
     }
 
-    function colorRect (topLeftX, topLeftY, boxWidth, boxHeight, fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(topLeftX, topLeftY, boxWidth, boxHeight);
+    // function to change player's sprite based on the keyboard input passed
+    function chooseDifficulty(code) {
+        // update the index to game difficulty
+        if(code == 38) {
+            difficultyLevel++;
+            if(difficultyLevel > 2) {
+                difficultyLevel = 0;
+            }
+        }
+        else if(code == 40) {
+            difficultyLevel--;
+            if(difficultyLevel < 0) {
+                difficultyLevel = 2;
+            }
+        }
+
+        // based on the index, choose between 3 difficulties
+        switch(difficultyLevel) {
+            case 0:
+                difficultyName = "EASY";
+                break;
+            case 1:
+                difficultyName = "MEDIUM";
+                break;
+            case 2:
+                difficultyName = "HARD";
+                break;
+        }
+        // defines 2 enemies for easy, 4 for medium and 6 for hard
+        enemiesQty = difficultyLevel*2 + 2; 
     }
 
-    function colorText (showWords, textX, textY, fillColor, fontStyle) {
-        ctx.font= fontStyle;
-        ctx.fillStyle = fillColor;
-        ctx.textAlign = "center";
-        ctx.fillText(showWords, textX, textY);
-    }
-
-    function restartGame() {
-        colorRect(0, (canvas.height/2)-100, canvas.width, 200, 'black');
-        colorText("YOU WON", canvas.width/2, canvas.height/2, 'yellow', "bold 30px Verdana");
-        colorText("PRESS ENTER TO RESTART", canvas.width/2, (canvas.height/2)+50, 'white', "18px Verdana");
+    // draw ending screen and wait for game restart 
+    function restartGame(result) {
+        drawEndScreen(canvas, ctx, result);
         document.addEventListener('keyup', function(e) {
-            if (e.keyCode == 13) {
-                endGame = false;
-                return;
+            if(endGame || youLose) {
+                if(e.keyCode == 13) { // when enter pressed, set conditions back to restart the game
+                    win.requestAnimationFrame(main);
+                    endGame = false;
+                    youLose = false;
+                    lives = 3;
+                }
             }
         });
     }
@@ -246,7 +269,11 @@ var Engine = (function(global) {
         'images/water-block.png',
         'images/grass-block.png',
         'images/enemy-bug.png',
-        'images/char-boy.png'
+        'images/char-boy.png',
+        'images/char-cat-girl.png',
+        'images/char-pink-girl.png',
+        'images/char-princess-girl.png',
+        'images/char-horn-girl.png'
     ]);
     Resources.onReady(init);
 
