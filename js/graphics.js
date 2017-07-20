@@ -25,6 +25,28 @@ function drawStartScreen(canvas, ctx, imageToChange) {
 function drawGameScreen(canvas, ctx) {
     colorRect(ctx, 0, 0, canvas.width, canvas.height, 'black');
     colorText(ctx, "LIVES: " + lives, canvas.width - 100, 35, 'yellow', "25px Verdana");
+    var timeElapsed = (currentDate-startDate)/1000;
+    // verify if the record is null and the game was won
+    if(record == null && endGame) {
+        record = timeElapsed;
+    // verify if the record the greater than the current run 
+    } else if (record > timeElapsed && endGame) {
+        record = timeElapsed;
+    }
+    // overflow control
+    if(timeElapsed > 999) {
+        timeElapsed = 999;
+    } 
+    if(record > 999) {
+        record = 999;
+    } 
+    var timeWrite = "Time: " + timeElapsed.toFixed(2) + "s ";
+    if(record == null) {
+        var recordWrite = "Record: -----";
+    } else {
+        var recordWrite = "Record: " + record.toFixed(2) + "s";
+    }
+    colorText(ctx, timeWrite + recordWrite, canvas.width/3, 35, 'lime', "20px Verdana");
 }
 
 // draw the restart game screen when the players reach the goal or loses all lives

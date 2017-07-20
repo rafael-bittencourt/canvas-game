@@ -27,19 +27,44 @@ var endGame = false;
 var youLose = false;
 var startGame = false;
 
+// time control variables
+var startDate;
+var currentDate;
+var record = null;
+
+// create the superclass Character
+var Character = function() { };
+
+// update the character's sprite with nSprite
+Character.prototype.updateSprite = function(nSprite) { 
+    this.sprite = nSprite;
+};
+
+// draw the character on the screen, required method for game
+Character.prototype.render = function() {
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+};
+
+// function to reset the characater to a determined position
+Character.prototype.reset = function(nCol, nRow) { 
+    this.x = nCol * TILE_WIDTH;
+    this.y = (nRow * TILE_HEIGHT) - TILE_HEIGHT/2;
+};
 
 // enemies class
 var Enemy = function() {
-    this.generate();
-};
-
-// fill the enemy's initial conditions
-Enemy.prototype.generate = function() {
+    Character.call(this);
     this.x = -TILE_WIDTH * 2;
     this.y = sortRow(1,3); // possible rows for the enemy movement
     this.speed = sortNumber(MAX_SPEED, MIN_SPEED); // sort a initial speed for the enemy
     this.sprite = 'images/enemy-bug.png';
 };
+
+// inherits from Character
+Enemy.prototype = new Character();
+
+// sets its constructor to Character
+Enemy.prototype.constructor = Character;
 
 // Update the enemy's position, required method for game
 // Parameter: dt, a time delta between ticks
@@ -47,7 +72,6 @@ Enemy.prototype.update = function(dt) {
     // multiply movement by the dt parameter to ensure the game runs at the same speed for
     // all computers.
     this.x += this.speed*dt;
-    this.checkCollisions();
     // check if the enemy reached the right side of the canvas
     if (this.x > CANVAS_W) {
         this.x = -TILE_WIDTH * 2; // restart the enemy on the left side of the canvas 
@@ -56,65 +80,32 @@ Enemy.prototype.update = function(dt) {
     }
 };
 
-// draw the enemy on the screen, required method for game
-Enemy.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-};
-
-// check if the enemy is "nearby" the player
-Enemy.prototype.checkCollisions = function() {
-    if( this.y == player.y && // player and enemy are on the same row
-        (player.x - TILE_WIDTH/2) < this.x && // player and enemy are on the same col
-        (player.x + TILE_WIDTH/2) > this.x) { // player and enemy are on the same col
-        player.reset(startX, startY); // reset player to the start position
-        // player loses one life if a condition is verified
-        if(lives > 0) {
-            lives--;
-        }
-        //if lives come to zero, player lost the game
-        if(lives == 0) {
-            youLose = true;
-        }
-    }
-};
-
 // player class
 var Player = function() {
+    Character.call(this);
     this.x = startX * TILE_WIDTH;
     this.y = (startY * TILE_HEIGHT) - TILE_HEIGHT/2;
     this.sprite = playerImagePath; 
+    this.dir = null;
 };
 
-// update the player's sprite with nSprite
-Player.prototype.updateSprite = function(nSprite) { 
-    this.sprite = nSprite;
-};
+// inherits from Character
+Player.prototype = new Character();
 
-// draw the player on the screen, required method for game
-Player.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-};
+// sets its constructor to Character
+Player.prototype.constructor = Character;
 
-// function to reset the player to a determined position
-Player.prototype.reset = function(nCol, nRow) { 
-    this.x = nCol * TILE_WIDTH;
-    this.y = (nRow * TILE_HEIGHT) - TILE_HEIGHT/2;
-};
-
-// function to update player's location based on the current player.dir
+// function to verify and update player's location based on the current player.dir
 Player.prototype.update = function() {
     if(this.dir == 'left' && this.x > 0) { // check left border
         this.x -= TILE_WIDTH;
-    }
-    else if(this.dir == 'right' && this.x < (CANVAS_W - TILE_WIDTH)) { // check right border
+    } else if(this.dir == 'right' && this.x < (CANVAS_W - TILE_WIDTH)) { // check right border
         this.x += TILE_WIDTH;
-    }
-    else if(this.dir == 'up') {
+    }else if(this.dir == 'up') {
         if (this.y + TILE_HEIGHT/2 == TILE_HEIGHT) { // if water is reached, game is won and player's position is reset
             this.reset(startX, startY);
             endGame = true;
-        }
-        else {
+        } else {
             this.y -= TILE_HEIGHT;
         }
     }
@@ -149,14 +140,14 @@ document.addEventListener('keyup', function(e) {
 });
 
 // function to sort a number between minNum and maxNum
-function sortNumber (maxNum, minNum) {
+function sortNumber(maxNum, minNum) {
     maxNum++; // adjust to include edge values
     minNum--; // adjust to include edge values
     return Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
 }
 
 // function to sort a row between bottomRow and topRow
-function sortRow (topRow, bottomRow) {
+function sortRow(topRow, bottomRow) {
     var startRow = sortNumber(topRow+1, bottomRow-1);
     return (startRow * TILE_HEIGHT) - TILE_HEIGHT/2;
 }

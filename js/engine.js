@@ -44,7 +44,8 @@ var Engine = (function(global) {
              /* Call our update/render functions, pass along the time delta to
              * our update function since it may be used for smooth animation.
              */
-            var now = Date.now(),
+            currentDate = Date.now();
+            var now = Date.now();
             dt = (now - lastTime) / 1000.0;
             updateEntities(dt);
             drawGameScreen(canvas, ctx);
@@ -91,6 +92,26 @@ var Engine = (function(global) {
             enemy.update(dt);
         });
         player.update();
+        checkCollisions();
+    }
+
+    // check if an enemy is "nearby" the player
+    function checkCollisions() {
+        allEnemies.forEach(function(enemy) {
+            if(enemy.y == player.y && // player and enemy are on the same row
+              (player.x - TILE_WIDTH/2) < enemy.x && // player and enemy are on the same col
+              (player.x + TILE_WIDTH/2) > enemy.x) { // player and enemy are on the same col
+                player.reset(startX, startY); // reset player to the start position
+                // player loses one life if a condition is verified
+                if(lives > 0) {
+                    lives--;
+                }
+                //if lives come to zero, player lost the game
+                if(lives == 0) {
+                    youLose = true;
+                }
+            }
+        });
     }
 
     /* This function initially draws the "game level", it will then call
@@ -159,6 +180,7 @@ var Engine = (function(global) {
                 if(e.keyCode == 13) { // enter is pressed
                     setEnemies(); // populate the enemies array
                     startGame = true; // set the condition to start the game
+                    startDate = Date.now();
                 }
                 if(e.keyCode == 37 || e.keyCode == 39) { // left or right arrows pressed
                     chooseCharacter(e.keyCode); // call the function to change player's sprite
@@ -247,6 +269,8 @@ var Engine = (function(global) {
 
     // draw ending screen and wait for game restart 
     function restartGame(result) {
+        startDate = Date.now();
+        firstMove = null;
         drawEndScreen(canvas, ctx, result);
         document.addEventListener('keyup', function(e) {
             if(endGame || youLose) {
